@@ -1,0 +1,8 @@
+{
+    "repo_path": "D:\\Projects\\PyProjects\\pymavenhoster\\repository",
+    "user": "admin",
+    "password": "test123",
+    "protect": [
+        "put"
+    ]
+}
