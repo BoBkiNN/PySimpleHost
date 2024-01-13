@@ -123,7 +123,7 @@ def mainRoute(artifact: str):
     if is_browser(request) and os.path.isdir(path.to_str()):
         if not check_access("browse"):
             return Response(status=401)
-        Logger.info(path)
+        # Logger.info(path)
         return indexFiles(path, Path(artifact))
     try:
         a = Artifact.parse(artifact)
