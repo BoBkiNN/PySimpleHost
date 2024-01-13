@@ -1,7 +1,8 @@
 {
-    "repo_path": "C:\\Users\\BoBkiNN\\.m2\\repository",
+    "repo_path": "~\\.m2\\repository",
     "user": "admin",
     "password": "test123",
     "protect": [
+        "put"
     ]
 }

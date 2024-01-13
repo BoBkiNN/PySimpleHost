@@ -39,6 +39,7 @@ def reload():
         repo_path = Path(DEF_CFG["repo_path"])
     else:
         repo_path = Path(repo_path)
+    repo_path = repo_path.expand_user()
     user = d["user"]
     pw = d["password"]
     if user == None or pw == None:
@@ -88,7 +89,7 @@ def download_file(path: Path) -> Response:
         return send_file(path.to_str())
     return err404c
 
-def indexFiles(path: Path, relative: Path) -> Response:
+def index_files(path: Path, relative: Path) -> Response:
     p = path.to_str()
     if not os.path.isdir(p):
         return err404c
@@ -118,13 +119,13 @@ def put_artifact(artifact: Artifact, r: Request) -> Response:
     return Response(status=201)
 
 @app.route('/<path:artifact>', methods=["GET", "PUT"])
-def mainRoute(artifact: str):
+def main_route(artifact: str):
     path: Path = repo_path.resolve(artifact)
     if is_browser(request) and os.path.isdir(path.to_str()):
         if not check_access("browse"):
             return Response(status=401)
         # Logger.info(path)
-        return indexFiles(path, Path(artifact))
+        return index_files(path, Path(artifact))
     try:
         a = Artifact.parse(artifact)
         if request.method == "GET":
@@ -141,7 +142,7 @@ def mainRoute(artifact: str):
             if os.path.isdir(path.to_str()):
                 if not check_access("browse"):
                     return Response(status=401)
-                return indexFiles(path, Path(artifact))
+                return index_files(path, Path(artifact))
             else:
                 if not check_access("download"):
                     return Response(status=401)
@@ -155,7 +156,7 @@ def root():
     if is_browser(request):
         if not check_access("browse"):
             return Response(status=401)
-        return indexFiles(repo_path, Path("/"))
+        return index_files(repo_path, Path("/"))
     return err404
 
 if __name__ == '__main__':

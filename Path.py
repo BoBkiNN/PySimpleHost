@@ -4,6 +4,9 @@ class Path:
     def __init__(self, path_str):
         self.path: str = os.path.normpath(path_str)
 
+    def expand_user(self):
+        return Path(os.path.expanduser(self.path))
+
     def resolve(self, other: str):
         new_path = os.path.normpath(os.path.join(self.path, other))
         return Path(new_path)
