@@ -159,10 +159,13 @@ def root():
         return index_files(repo_path, Path("/"))
     return err404
 
-if __name__ == '__main__':
+def start():
     Logger.init(file=False)
     reload()
     Logger.info("Repo base path: "+repo_path)
     Logger.info("Protecting", protect)
-    app.run(host='0.0.0.0', port=9800, debug=True)
+    return app
+
+if __name__ == '__main__':
+    start().run(host='0.0.0.0', port=9800, debug=False)
  

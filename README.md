@@ -16,3 +16,7 @@
     ]
 }
 ```
+
+### Running:
+* waitress: `python -m waitress --call --listen *:9800 main:start`
+* not production: `python main.py`

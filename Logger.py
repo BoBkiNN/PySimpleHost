@@ -18,7 +18,12 @@ from tzlocal import get_localzone
 from termcolor import colored
 
 def init(console=True, file=True, color=True, timezone=pytz.timezone(str(get_localzone())), dateF="[%d/%m/%Y %H:%M:%S]", dir=os.getcwd() + os.sep + "logs"):
-	global logToConsole, logToFile, coloredLog, dateFormat, tz, folder
+	global logToConsole, logToFile, coloredLog, dateFormat, tz, folder, inited
+	try:
+		if inited:
+			return
+	except:
+		pass
 	logToConsole = console
 	logToFile = file
 	coloredLog = color
@@ -27,6 +32,7 @@ def init(console=True, file=True, color=True, timezone=pytz.timezone(str(get_loc
 	folder = dir
 	if os.name == "nt":
 		colorama.init(autoreset=True)
+	inited = True
 
 def getDate() -> str:
 	"""Get formatted date in Moscow
