@@ -69,6 +69,7 @@ def errc(code: int) -> Response:
     return Response(f"<!DOCTYPE html><html><head></head><body><h1>{code}</h1></body></html>", code)
 
 err404c = errc(404)
+err401c = Response(status=401, headers={"WWW-Authenticate": f"Basic realm=\"{app.import_name}\""})
 
 def is_browser(r: Request):
     return BROWSER_PATTERN.findall(r.headers["User-Agent"]) != None
@@ -123,13 +124,15 @@ def main_route(artifact: str):
     path: Path = repo_path.resolve(artifact)
     if is_browser(request) and os.path.isdir(path.to_str()):
         if not check_access("browse"):
-            return Response(status=401)
+            return err401c
         # Logger.info(path)
         return index_files(path, Path(artifact))
     try:
         a = Artifact.parse(artifact)
         if request.method == "GET":
-            if not check_access("download"):
+            if not check_access("download") and is_browser(request): # check for "download" if in browser
+                return err401c
+            if not check_access("get") and not is_browser(request): # check for "get" if not in browser
                 return Response(status=401)
             return get_artifact(a)
         elif request.method == "PUT":
@@ -141,11 +144,11 @@ def main_route(artifact: str):
             Logger.info(path)
             if os.path.isdir(path.to_str()):
                 if not check_access("browse"):
-                    return Response(status=401)
+                    return err401c
                 return index_files(path, Path(artifact))
             else:
                 if not check_access("download"):
-                    return Response(status=401)
+                    return err401c
                 return download_file(Path(artifact))
         Logger.warn("Not an artifact: "+str(e))
         return err404
@@ -155,7 +158,7 @@ def main_route(artifact: str):
 def root():
     if is_browser(request):
         if not check_access("browse"):
-            return Response(status=401)
+            return err401c
         return index_files(repo_path, Path("/"))
     return err404
 
@@ -167,5 +170,5 @@ def start():
     return app
 
 if __name__ == '__main__':
-    start().run(host='0.0.0.0', port=9800, debug=False)
+    start().run(host='0.0.0.0', port=9800, debug=True)
  
