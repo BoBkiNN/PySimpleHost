@@ -33,6 +33,12 @@
 * `download` - require auth when getting files in browser
 * `browse` - require auth when accesing list of files
 
+### Installing
+1. Clone repository `git clone https://github.com/BoBkiNN/SimpleRepoHost`
+2. Install python >3.9
+3. Install required modules: `python -m pip install -r .\requirements.txt`
+4. Configure `config.json` inside cloned repository
+
 ### Running:
 * waitress: `python -m waitress --call --listen *:9800 main:start`
 * not production: `python main.py`
