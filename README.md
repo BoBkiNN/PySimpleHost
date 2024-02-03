@@ -36,7 +36,7 @@
 ### Installing
 1. Clone repository `git clone https://github.com/BoBkiNN/SimpleRepoHost`
 2. Install python >3.9
-3. Install required modules: `python -m pip install -r .\requirements.txt`
+3. Install required modules: `python -m pip install -r requirements.txt`
 4. Configure `config.json` inside cloned repository
 
 ### Running:
