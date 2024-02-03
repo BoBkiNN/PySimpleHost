@@ -9,22 +9,46 @@ import Logger
 
 CFG_FILE = os.getcwd()+os.sep+"config.json"
 BROWSER_PATTERN = re.compile("Chrome|Mozilla|Safari|Opera")
+DARK_THEME_STYLES = """<style>
+    @media (prefers-color-scheme: dark) {
+        body {
+            background: #333;
+            color: #FFF;
+        }
+        a {
+            color: #59afff
+        }
+    }
+    </style>
+    """
 DEF_CFG = {
     "repo_path": os.getcwd()+os.sep+"repository",
     "user": "admin",
     "password": "password",
-    "protect": ["put"] # All: ["download", "put", "browse"]
+    "protect": ["put"], # All: ["download", "put", "browse"]
+    "display": {
+        "col1-spacing": 51,
+        "col2-spacing": 20,
+        "gnu-style-size": True,
+        "display-mtime": True,
+        "display-size": True,
+        "auto-dark-theme": True
+    },
+    "watchdog": True
 }
 DEF_AUTH = "admin:password"
 
-def load_cfg(return_empty: bool) -> dict:
+def load_cfg(return_fallback: bool, fallback: dict = {}) -> dict:
     if os.path.isfile(CFG_FILE):
         with open(CFG_FILE, "r") as f:
             Logger.info("Loading config")
-            return json.loads(f.read())
+            try:
+                return json.loads(f.read())
+            except:
+                return fallback
     else:
-        if return_empty:
-            return {}
+        if return_fallback:
+            return fallback
         save_cfg(DEF_CFG)
         return DEF_CFG
 
@@ -37,10 +61,12 @@ auth = base64.b64encode(DEF_AUTH.encode()).decode()
 protect = ["put"]
 display_settings: dict = {}
 enable_watchdog: bool = True
+curr_cfg: dict = {}
 
 def reload(on_start: bool):
-    global repo_path, auth, protect, display_settings, enable_watchdog
-    d = load_cfg(not on_start)
+    global repo_path, auth, protect, display_settings, enable_watchdog, curr_cfg
+    d = load_cfg(not on_start, curr_cfg)
+    curr_cfg = d
     repo_path = d["repo_path"]
     if repo_path == None:
         repo_path = Path(DEF_CFG["repo_path"])
@@ -143,7 +169,10 @@ def get_file_size(file_path: str):
         return ""
     if os.path.isfile(file_path):
         size_in_bytes = os.path.getsize(file_path)
-        return humanize.naturalsize(size_in_bytes, True, display_settings.get("gnu-style-size", True), "%.2f")
+        if display_settings.get("humanize-size", True):
+            return humanize.naturalsize(size_in_bytes, True, display_settings.get("gnu-style-size", True), "%.2f")
+        else:
+            return str(size_in_bytes)
     else:
         return "-"
 
@@ -159,7 +188,9 @@ def index_files(path: Path, relative: Path) -> Response:
     indexstr = "/"+relative.to_str().replace(os.sep, "/")
     if not indexstr.endswith("/"):
         indexstr+="/"
-    html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head></head><body><h1>Index of {indexstr}</h1><hr><pre>"
+    empty = ""
+    auto_dark_theme: bool = display_settings.get("auto-dark-theme", True)
+    html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else empty}</head><body><h1>Index of {indexstr}</h1><hr><pre>"
     if path != repo_path:
         html += f"<a href=\"../\">../</a>"+"\n"
     for f in ls:

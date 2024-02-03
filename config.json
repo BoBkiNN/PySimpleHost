@@ -8,9 +8,11 @@
     "display": {
         "col1-spacing": 51,
         "col2-spacing": 20,
+        "humanize-size": true,
         "gnu-style-size": true,
         "display-mtime": true,
-        "display-size": true
+        "display-size": true,
+        "auto-dark-theme": false
     },
     "watchdog": true
 }
