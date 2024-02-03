@@ -1,5 +1,8 @@
 from flask import Flask, Response, request, send_file, Request
-import os, re, json, base64
+import os, re, json, base64, time
+import humanize
+from watchdog.observers.polling import PollingObserver as Observer
+import watchdog.events
 from artifact import Artifact, ArtifactParseException
 from Path import Path
 import Logger
@@ -14,12 +17,14 @@ DEF_CFG = {
 }
 DEF_AUTH = "admin:password"
 
-def load_cfg() -> dict:
+def load_cfg(return_empty: bool) -> dict:
     if os.path.isfile(CFG_FILE):
         with open(CFG_FILE, "r") as f:
             Logger.info("Loading config")
-            return json.load(f)
+            return json.loads(f.read())
     else:
+        if return_empty:
+            return {}
         save_cfg(DEF_CFG)
         return DEF_CFG
 
@@ -30,10 +35,12 @@ def save_cfg(data: dict):
 repo_path = Path(DEF_CFG["repo_path"])
 auth = base64.b64encode(DEF_AUTH.encode()).decode()
 protect = ["put"]
+display_settings: dict = {}
+enable_watchdog: bool = True
 
-def reload():
-    global repo_path, auth, protect
-    d = load_cfg()
+def reload(on_start: bool):
+    global repo_path, auth, protect, display_settings, enable_watchdog
+    d = load_cfg(not on_start)
     repo_path = d["repo_path"]
     if repo_path == None:
         repo_path = Path(DEF_CFG["repo_path"])
@@ -50,6 +57,25 @@ def reload():
     protect = d["protect"]
     if protect == None:
         protect = ["put"]
+    display_settings = d.get("display", {})
+    enable_watchdog = d.get("watchdog", True)
+    if not enable_watchdog:
+        if watcher.is_alive():
+            Logger.info("Stopping watchdog")
+            watcher.stop()
+
+class ConfigChangeHandler(watchdog.events.FileSystemEventHandler):
+    def __init__(self) -> None:
+        super().__init__()
+    def on_modified(self, event: watchdog.events.FileSystemEvent):
+        if not event.is_directory:
+            self.on_config_change()
+    
+    def on_config_change(self):
+        Logger.info("Detected config change, reloading")
+        reload(False)
+
+watcher = Observer()
 
 def check_access(perm: str) -> bool:
     if perm in protect:
@@ -90,18 +116,65 @@ def download_file(path: Path) -> Response:
         return send_file(path.to_str())
     return err404c
 
+def list_and_sort_files(directory):
+    files = os.listdir(directory)
+    # Separate directories and files
+    directories = [d for d in files if os.path.isdir(os.path.join(directory, d))]
+    files = [f for f in files if os.path.isfile(os.path.join(directory, f))]
+    directories.sort()
+    files.sort()
+    return directories + files
+
+def get_formatted_file_modify_time(file_path):
+    if not display_settings.get("display-mtime", True):
+        return ""
+    try:
+        # Get the last modification time of the file
+        modification_time = os.path.getmtime(file_path)
+
+        # Convert the modification time to a struct_time
+        time_struct = time.gmtime(modification_time)
+        return time.strftime('%d-%b-%Y %H:%M', time_struct)
+    except FileNotFoundError:
+        return "-"
+
+def get_file_size(file_path: str):
+    if not display_settings.get("display-size", True):
+        return ""
+    if os.path.isfile(file_path):
+        size_in_bytes = os.path.getsize(file_path)
+        return humanize.naturalsize(size_in_bytes, True, display_settings.get("gnu-style-size", True), "%.2f")
+    else:
+        return "-"
+
+def shift_text_right(strsize: int, text: str):
+    spaces = max(1, strsize-len(text))
+    return " "*spaces+text
+
 def index_files(path: Path, relative: Path) -> Response:
     p = path.to_str()
     if not os.path.isdir(p):
         return err404c
-    ls = os.listdir(p)
-    html = f"<!DOCTYPE html><html><head></head><body><h1>Index of {relative}:</h1><hr><ul>"
+    ls = list_and_sort_files(p)
+    indexstr = "/"+relative.to_str().replace(os.sep, "/")
+    if not indexstr.endswith("/"):
+        indexstr+="/"
+    html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head></head><body><h1>Index of {indexstr}</h1><hr><pre>"
     if path != repo_path:
-        html += f"<li><a href={request.host_url+relative.get_parent()}>..</a></li>"
+        html += f"<a href=\"../\">../</a>"+"\n"
     for f in ls:
-        href = request.base_url.removesuffix("/")+"/"+f
-        html += f"<li><a href={href}>{f}</a></li>"
-    html += "</ul></body></html>"
+        fp = path.resolve(f).to_str()
+        filesize = get_file_size(fp)
+        mtime = get_formatted_file_modify_time(fp)
+        sizestr = shift_text_right(display_settings.get("col2-spacing", 20), filesize)
+        if os.path.isdir(fp):
+            href = f+"/"
+        else:
+            href = f
+        mtimestr = " "*(display_settings.get("col1-spacing", 51)-len(href))+mtime
+        metastr: str = mtimestr+sizestr
+        html += f"<a href={href}>{href}</a>{metastr.rstrip()}\n"
+    html += "</pre><hr></body></html>"
     return Response(html, 200, mimetype="text/html")
 
 
@@ -164,7 +237,11 @@ def root():
 
 def start():
     Logger.init(file=False)
-    reload()
+    reload(True)
+    if enable_watchdog:
+        watcher.schedule(ConfigChangeHandler(), CFG_FILE)
+        watcher.start()
+        Logger.info("Tracking "+CFG_FILE+" updates:", watcher.is_alive())
     Logger.info("Repo base path: "+repo_path)
     Logger.info("Protecting", protect)
     return app
