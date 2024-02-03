@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, send_file, Request
+from flask import Flask, Response, request, send_file, Request, redirect, url_for
 import os, re, json, base64, time
 import humanize
 from watchdog.observers.polling import PollingObserver as Observer
@@ -15,8 +15,11 @@ DARK_THEME_STYLES = """<style>
             background: #333;
             color: #FFF;
         }
-        a {
+        a:link {
             color: #59afff
+        }
+        a:visited {
+            color: #7583ff
         }
     }
     </style>
@@ -185,12 +188,12 @@ def index_files(path: Path, relative: Path) -> Response:
     if not os.path.isdir(p):
         return err404c
     ls = list_and_sort_files(p)
-    indexstr = "/"+relative.to_str().replace(os.sep, "/")
-    if not indexstr.endswith("/"):
+    indexstr = relative.to_str().replace(os.sep, "/").removeprefix("/")
+    if not indexstr.endswith("/") and len(indexstr) > 0:
         indexstr+="/"
     empty = ""
     auto_dark_theme: bool = display_settings.get("auto-dark-theme", True)
-    html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else empty}</head><body><h1>Index of {indexstr}</h1><hr><pre>"
+    html = f"<!DOCTYPE html><html><title>Index of /{indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else empty}</head><body><h1>Index of /{indexstr}</h1><hr><pre>"
     if path != repo_path:
         html += f"<a href=\"../\">../</a>"+"\n"
     for f in ls:
@@ -230,6 +233,8 @@ def main_route(artifact: str):
         if not check_access("browse"):
             return err401c
         # Logger.info(path)
+        if not artifact.endswith("/"):
+            return redirect(url_for('main_route', artifact=artifact + '/'))
         return index_files(path, Path(artifact))
     try:
         a = Artifact.parse(artifact)
