@@ -21,7 +21,7 @@
         "gnu-style-size": true, // if true, writes B, KB, MB and etc, else Bytes, KiB, MiB and etc
         "display-mtime": true, // if true, displays file modify time
         "display-size": true, // if true, displays file size
-        "auto-dark-theme": false // if true, css for auto dark theme is added
+        "auto-dark-theme": true // if true, css for auto dark theme is added
     },
     "watchdog": true // should we track changes in config.json?
 }
