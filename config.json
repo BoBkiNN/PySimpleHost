@@ -12,7 +12,7 @@
         "gnu-style-size": true,
         "display-mtime": true,
         "display-size": true,
-        "auto-dark-theme": false
+        "auto-dark-theme": true
     },
     "watchdog": true
 }
