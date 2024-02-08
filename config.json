@@ -1,10 +1,9 @@
 {
-    "repo_path": "~/.m2/repository",
     "user": "admin",
     "password": "test123",
     "enable-put": true,
     "protect": [
-        "put"
+        "all"
     ],
     "show-mtime": true,
     "show-size": true,
@@ -14,6 +13,14 @@
         "humanize-size": true,
         "gnu-style-size": true,
         "auto-dark-theme": true
+    },
+    "contents": {
+        "": "D:\\Projects\\PyProjects\\flaskpanel\\www",
+        "fs":"~/Pictures/avatars",
+        "avatar": "~/Pictures/avatars/random_icon.png"
+    },
+    "redirect-flow": {
+        "": "index.html"
     },
     "watchdog": true
 }

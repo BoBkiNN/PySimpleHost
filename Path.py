@@ -1,4 +1,6 @@
 import os
+from typing import Union
+
 
 class Path:
     """Java-like Path class"""
@@ -9,8 +11,14 @@ class Path:
     def expand_user(self):
         return Path(os.path.expanduser(self.path))
 
-    def resolve(self, other: str):
-        new_path = os.path.normpath(os.path.join(self.path, other))
+
+    def resolve(self, other: Union[str, "Path"]):
+        if isinstance(other, str):
+            new_path = os.path.normpath(os.path.join(self.path, other))
+        elif isinstance(other, Path):
+            new_path = os.path.normpath(os.path.join(self.path, os.path.splitdrive(other.path)[1]))
+        else:
+            raise ValueError("Other is not str or Path: "+str(type(other)))
         return Path(new_path)
 
     def get_parent(self):
@@ -32,7 +40,7 @@ class Path:
     def __repr__(self) -> str:
         return str(self)
     
-    def __radd__(self, other):
+    def __radd__(self, other): # type: ignore
         if type(other) is str:
             return other+self.path
         elif type(other) is Path:
@@ -44,7 +52,7 @@ class Path:
         else:
             raise TypeError("Cannot radd "+str(type(other)))
 
-    def __add__(self, other):
+    def __add__(self, other): # type: ignore
         if type(other) == str:
             return self.path+other
         elif type(other) is Path:

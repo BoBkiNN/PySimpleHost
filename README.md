@@ -8,20 +8,26 @@
 ### Config explanation:
 ```json5
 {
-    "repo_path": "D:\\repository", // path where files are located
     "user": "admin", // username 
     "password": "test123", // password
     "protect": [ // what features are protected using password. Defaults to ["put"]
-        "put" // list of "put", "get", "index"
+        "put" // list of "put", "get", "index", "all"
     ],
+    "show-mtime": true, // send file modify time in index?
+    "show-size": true, // send file size in index?
     "display": { // settings of web index page
         "col1-spacing": 51, // size of first column
         "col2-spacing": 20, // size of second column
         "humanize-size": true, // if false, writes size in bytes
         "gnu-style-size": true, // if true, writes B, KB, MB and etc, else Bytes, KiB, MiB and etc
-        "display-mtime": true, // if true, displays file modify time
-        "display-size": true, // if true, displays file size
         "auto-dark-theme": true // if true, css for auto dark theme is added
+    },
+    "contents": {
+        "": "~/www",
+        "repo":"~/.m2/repository/"
+    },
+    "redirect-flow": { // where to omit content
+        "": "index.html"
     },
     "watchdog": true // should we track changes in config.json?
 }
@@ -31,6 +37,7 @@
 * `put` - require auth when uploading files
 * `get` - require auth when getting files
 * `index` - require auth when accesing list of files
+* `all` - combine of upper three values
 
 ### Installing
 1. Clone repository `git clone https://github.com/BoBkiNN/SimpleRepoHost`
@@ -39,5 +46,7 @@
 4. Configure `config.json` inside cloned repository
 
 ### Running:
-* waitress: `python -m waitress --call --listen *:9800 main:start`
+* waitress: 
+    1. Install `waitress` module: `python -m pip install waitress`
+    2. `python -m waitress --call --listen *:9800 main:start`
 * not production: `python main.py`
