@@ -5,3 +5,4 @@ colorama
 pytz
 tzlocal
 termcolor
+urllib3
