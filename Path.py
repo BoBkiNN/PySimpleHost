@@ -1,6 +1,8 @@
 import os
 
 class Path:
+    """Java-like Path class"""
+    
     def __init__(self, path_str):
         self.path: str = os.path.normpath(path_str)
 

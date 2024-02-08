@@ -1,4 +1,4 @@
-## Simple python flask server for hosting maven repository
+## Simple python flask server for hosting folder contents
 
 ### Features:
 * Basic auth (username and password)
@@ -6,13 +6,13 @@
 * HTML view of repo (with dark theme)
 
 ### Config explanation:
-```json
+```json5
 {
     "repo_path": "D:\\repository", // path where files are located
     "user": "admin", // username 
     "password": "test123", // password
     "protect": [ // what features are protected using password. Defaults to ["put"]
-        "put" // list of "put", "get", "download", "browse"
+        "put" // list of "put", "get", "index"
     ],
     "display": { // settings of web index page
         "col1-spacing": 51, // size of first column
@@ -21,7 +21,7 @@
         "gnu-style-size": true, // if true, writes B, KB, MB and etc, else Bytes, KiB, MiB and etc
         "display-mtime": true, // if true, displays file modify time
         "display-size": true, // if true, displays file size
-        "auto-dark-theme": false // if true, css for auto dark theme is added
+        "auto-dark-theme": true // if true, css for auto dark theme is added
     },
     "watchdog": true // should we track changes in config.json?
 }
@@ -29,9 +29,8 @@
 
 ### Protect values description:
 * `put` - require auth when uploading files
-* `get` - require auth when getting files outside browser
-* `download` - require auth when getting files in browser
-* `browse` - require auth when accesing list of files
+* `get` - require auth when getting files
+* `index` - require auth when accesing list of files
 
 ### Installing
 1. Clone repository `git clone https://github.com/BoBkiNN/SimpleRepoHost`

@@ -3,8 +3,8 @@ import os, re, json, base64, time
 import humanize
 from watchdog.observers.polling import PollingObserver as Observer
 import watchdog.events
-from artifact import Artifact, ArtifactParseException
 from Path import Path
+from config import Config
 import Logger
 
 CFG_FILE = os.getcwd()+os.sep+"config.json"
@@ -61,14 +61,13 @@ def save_cfg(data: dict):
 
 repo_path = Path(DEF_CFG["repo_path"])
 auth = base64.b64encode(DEF_AUTH.encode()).decode()
-protect = ["put"]
-display_settings: dict = {}
-enable_watchdog: bool = True
 curr_cfg: dict = {}
+config: Config = Config()
 
 def reload(on_start: bool):
-    global repo_path, auth, protect, display_settings, enable_watchdog, curr_cfg
+    global repo_path, auth, curr_cfg, config
     d = load_cfg(not on_start, curr_cfg)
+    config[""] = d
     curr_cfg = d
     repo_path = d["repo_path"]
     if repo_path == None:
@@ -83,11 +82,7 @@ def reload(on_start: bool):
     else:
         auth = base64.b64encode(str.encode(user+":"+pw))
     auth = auth.decode()
-    protect = d["protect"]
-    if protect == None:
-        protect = ["put"]
-    display_settings = d.get("display", {})
-    enable_watchdog = d.get("watchdog", True)
+    enable_watchdog: bool = config.get("watchdog", True)
     if not enable_watchdog:
         if watcher.is_alive():
             Logger.info("Stopping watchdog")
@@ -107,13 +102,14 @@ class ConfigChangeHandler(watchdog.events.FileSystemEventHandler):
 watcher = Observer()
 
 def check_access(perm: str) -> bool:
-    if perm in protect:
+    if perm in config.get("protect", ["put"]):
         h = request.headers.get("Authorization", None)
         if h == None:
             return False
         if h.startswith("Basic "):
             provided = h.removeprefix("Basic ")
             return auth == provided
+        else: return False
     else:
         return True
 
@@ -128,17 +124,6 @@ err401c = Response(status=401, headers={"WWW-Authenticate": f"Basic realm=\"{app
 
 def is_browser(r: Request):
     return BROWSER_PATTERN.findall(r.headers["User-Agent"]) != None
-
-def get_file(artifact: Artifact) -> Path:
-    return repo_path.resolve(artifact.get_file())
-
-def get_artifact(artifact: Artifact) -> Response:
-    path = get_file(artifact)
-    if os.path.isfile(path.to_str()):
-        Logger.info("Sending artifact "+artifact)
-        return send_file(path.to_str())
-    Logger.info("Artifact not found "+artifact)
-    return err404
 
 def download_file(path: Path) -> Response:
     if os.path.isfile(path.to_str()):
@@ -155,7 +140,7 @@ def list_and_sort_files(directory):
     return directories + files
 
 def get_formatted_file_modify_time(file_path):
-    if not display_settings.get("display-mtime", True):
+    if not config.get("show-mtime", True):
         return ""
     try:
         # Get the last modification time of the file
@@ -168,12 +153,12 @@ def get_formatted_file_modify_time(file_path):
         return "-"
 
 def get_file_size(file_path: str):
-    if not display_settings.get("display-size", True):
+    if not config.get("show-size", True):
         return ""
     if os.path.isfile(file_path):
         size_in_bytes = os.path.getsize(file_path)
-        if display_settings.get("humanize-size", True):
-            return humanize.naturalsize(size_in_bytes, True, display_settings.get("gnu-style-size", True), "%.2f")
+        if config.get("display.humanize-size", True):
+            return humanize.naturalsize(size_in_bytes, True, config.get("display.gnu-style-size", True), "%.2f")
         else:
             return str(size_in_bytes)
     else:
@@ -186,38 +171,61 @@ def shift_text_right(strsize: int, text: str):
 def index_files(path: Path, relative: Path) -> Response:
     p = path.to_str()
     if not os.path.isdir(p):
-        return err404c
+        return err404c if not is_browser(request) else err404
     ls = list_and_sort_files(p)
     indexstr = relative.to_str().replace(os.sep, "/").removeprefix("/")
     if not indexstr.endswith("/") and len(indexstr) > 0:
         indexstr+="/"
+    indexstr = "/"+indexstr
+    if not is_browser(request):
+        d = {"indexOf": indexstr}
+        files = []
+        for name in ls:
+            file_path = path.resolve(name).to_str()
+            if not os.path.exists(file_path): continue
+            o = {"name": name, "path": indexstr+name}
+            if config.get("show-mtime", True):
+                mtime = os.path.getmtime(file_path)
+                o["mtime"] = int(mtime*1000) # ms
+            if os.path.isdir(file_path):
+                o["dir"] = True
+                files.append(o)
+                continue
+            if config.get("show-size", True):
+                o["size"] = os.path.getsize(file_path)
+            files.append(o)
+        d["len"] = len(files) # type: ignore
+        d["ls"] = files # type: ignore
+        return Response(json.dumps(d), status=200, mimetype="application/json")
+            
     empty = ""
-    auto_dark_theme: bool = display_settings.get("auto-dark-theme", True)
-    html = f"<!DOCTYPE html><html><title>Index of /{indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else empty}</head><body><h1>Index of /{indexstr}</h1><hr><pre>"
+    auto_dark_theme: bool = config.get("display.auto-dark-theme", True)
+    html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else empty}</head><body><h1>Index of {indexstr}</h1><hr><pre>"
     if path != repo_path:
         html += f"<a href=\"../\">../</a>"+"\n"
     for f in ls:
         fp = path.resolve(f).to_str()
         filesize = get_file_size(fp)
         mtime = get_formatted_file_modify_time(fp)
-        sizestr = shift_text_right(display_settings.get("col2-spacing", 20), filesize)
+        sizestr = shift_text_right(config.get("display.col2-spacing", 20), filesize)
         if os.path.isdir(fp):
             href = f+"/"
         else:
             href = f
-        mtimestr = " "*(display_settings.get("col1-spacing", 51)-len(href))+mtime
+        mtimestr = " "*max(1, config.get("display.col1-spacing", 51)-len(href))+mtime
         metastr: str = mtimestr+sizestr
         html += f"<a href={href}>{href}</a>{metastr.rstrip()}\n"
     html += "</pre><hr></body></html>"
     return Response(html, 200, mimetype="text/html")
 
 
-def put_artifact(artifact: Artifact, r: Request) -> Response:
+def put_file(fullPath: Path, r: Request) -> Response:
+    if not config.get("enable-put", True):
+        return err401c if is_browser(request) else Response(status=401)
     # print(len(r.data), len(r.files), r.files.to_dict())
-    Logger.info("Uploading artifact "+artifact+" "+artifact.file)
-    target = get_file(artifact)
-    os.makedirs(target.get_parent().to_str(), exist_ok=True)
-    p = target.to_str()
+    Logger.info("Uploading file "+fullPath)
+    os.makedirs(fullPath.get_parent().to_str(), exist_ok=True)
+    p = fullPath.to_str()
     if os.path.exists(p):
         mode = "wb"
     else:
@@ -226,60 +234,42 @@ def put_artifact(artifact: Artifact, r: Request) -> Response:
         f.write(r.data)
     return Response(status=201)
 
-@app.route('/<path:artifact>', methods=["GET", "PUT"])
-def main_route(artifact: str):
-    path: Path = repo_path.resolve(artifact)
-    if is_browser(request) and os.path.isdir(path.to_str()):
-        if not check_access("browse"):
-            return err401c
+@app.route('/<path:urlPath>', methods=["GET", "PUT"])
+def main_route(urlPath: str):
+    path: Path = repo_path.resolve(urlPath)
+    browser = is_browser(request)
+    if os.path.isdir(path.to_str()):
+        if not check_access("index"):
+            return err401c if browser else Response(status=401)
         # Logger.info(path)
-        if not artifact.endswith("/"):
-            return redirect(url_for('main_route', artifact=artifact + '/'))
-        return index_files(path, Path(artifact))
-    try:
-        a = Artifact.parse(artifact)
-        if request.method == "GET":
-            if not check_access("download") and is_browser(request): # check for "download" if in browser
-                return err401c
-            if not check_access("get") and not is_browser(request): # check for "get" if not in browser
-                return Response(status=401)
-            return get_artifact(a)
-        elif request.method == "PUT":
-            if not check_access("put"):
-                return Response(status=401)
-            return put_artifact(a, request)
-    except ArtifactParseException as e:
-        if is_browser(request):
-            Logger.info(path)
-            if os.path.isdir(path.to_str()):
-                if not check_access("browse"):
-                    return err401c
-                return index_files(path, Path(artifact))
-            else:
-                if not check_access("download"):
-                    return err401c
-                return download_file(Path(artifact))
-        Logger.warn("Not an artifact: "+str(e))
-        return err404
-    return err404
+        if not urlPath.endswith("/"):
+            return redirect(url_for('main_route', urlPath=urlPath + '/'))
+        return index_files(path, Path(urlPath))
+    if request.method == "GET":
+        if not check_access("get") and not browser:
+            return err401c if browser else Response(status=401)
+        return download_file(path)
+    elif request.method == "PUT":
+        if not check_access("put"):
+            return err401c if browser else Response(status=401)
+        return put_file(path, request)
+    else:
+        return Response(status=405)
 
 @app.route("/")
 def root():
-    if is_browser(request):
-        if not check_access("browse"):
-            return err401c
-        return index_files(repo_path, Path("/"))
-    return err404
-
+    if not check_access("index"):
+        return err401c if is_browser(request) else Response(status=401)
+    return index_files(repo_path, Path("/"))
 def start():
     Logger.init(file=False)
     reload(True)
-    if enable_watchdog:
+    if config.get("watchdog", True):
         watcher.schedule(ConfigChangeHandler(), CFG_FILE)
         watcher.start()
         Logger.info("Tracking "+CFG_FILE+" updates:", watcher.is_alive())
-    Logger.info("Repo base path: "+repo_path)
-    Logger.info("Protecting", protect)
+    Logger.info("Base path: "+repo_path)
+    Logger.info("Protecting", config.get("protect", ["put"]))
     return app
 
 if __name__ == '__main__':
