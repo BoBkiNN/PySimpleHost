@@ -22,12 +22,12 @@
         "gnu-style-size": true, // if true, writes B, KB, MB and etc, else Bytes, KiB, MiB and etc
         "auto-dark-theme": true // if true, css for auto dark theme is added
     },
-    "contents": {
-        "": "~/www",
-        "repo":"~/.m2/repository/"
+    "contents": { // what folders/files to serve
+        "": "./www", // base path will show us content from ~/www folder
+        "repo":"~/.m2/repository/" // "/repo" url with show us maven repository
     },
     "redirect-flow": { // where to omit content
-        "": "index.html"
+        "": "index.html" // show "/index.html" if url path is empty
     },
     "watchdog": true // should we track changes in config.json?
 }

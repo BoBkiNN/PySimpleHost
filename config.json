@@ -15,9 +15,8 @@
         "auto-dark-theme": true
     },
     "contents": {
-        "": "D:\\Projects\\PyProjects\\flaskpanel\\www",
-        "fs":"~/Pictures/avatars",
-        "avatar": "~/Pictures/avatars/random_icon.png"
+        "": "./www",
+        "repo":"~/.m2/repository/"
     },
     "redirect-flow": {
         "": "index.html"

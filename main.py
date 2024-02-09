@@ -212,11 +212,7 @@ def index_files(folder: Path, base: Path, relative: str) -> Response:
         d["len"] = len(files) # type: ignore
         d["ls"] = files # type: ignore
         return Response(json.dumps(d), status=200, mimetype="application/json")
-            
-            
-    empty = ""
     
-    empty = ""
     auto_dark_theme: bool = config.get("display.auto-dark-theme", True)
     html = f"<!DOCTYPE html><html><title>Index of {indexstr}</title><head>{DARK_THEME_STYLES if auto_dark_theme else EMPTY_STR}</head><body><h1>Index of {indexstr}</h1><hr><pre>"
     # Logger.info(base, folder)
