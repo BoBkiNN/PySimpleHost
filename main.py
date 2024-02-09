@@ -285,10 +285,11 @@ def main_end(urlPath: str):
             # Logger.info(f"Redirecting flow from '{k}' to '{v}'")
             urlPath = v
     content_dir = parse_content_dir(urlPath)
+    # Logger.info("Content:", content_dir)
     if content_dir == None:
         return errc(404) if is_browser(request) else err404
     base, relative = content_dir
-    return process_fs(base, relative, urlPath)
+    return process_fs(base, relative, request.path)
 
 @app.route('/<path:urlPath>', methods=["GET", "PUT"])
 def main_route(urlPath: str):
