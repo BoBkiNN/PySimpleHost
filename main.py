@@ -1,7 +1,7 @@
 from flask import Flask, Response, request, send_file, Request, redirect, url_for
 import os, re, json, base64, time
 import humanize
-from typing import Any
+from typing import Union
 from urllib.parse import quote
 from watchdog.observers.polling import PollingObserver as Observer
 import watchdog.events
@@ -270,7 +270,7 @@ def process_fs(base: Path, relative: Path, fullPath: str):
     else:
         return Response(status=405)
 
-def parse_content_dir(path: str) -> tuple[Path, Path] | None: # [base, relative] or 404
+def parse_content_dir(path: str) -> Union[tuple[Path, Path], None]: # [base, relative] or 404
     """Get base and relative or None if not found"""
     for k, v in contents.items():
         if path.startswith(k):
