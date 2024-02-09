@@ -3,7 +3,7 @@
     "password": "test123",
     "enable-put": true,
     "protect": [
-        "all"
+        "put"
     ],
     "show-mtime": true,
     "show-size": true,
