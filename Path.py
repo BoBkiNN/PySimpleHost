@@ -11,7 +11,6 @@ class Path:
     def expand_user(self):
         return Path(os.path.expanduser(self.path))
 
-
     def resolve(self, other: Union[str, "Path"]):
         if isinstance(other, str):
             new_path = os.path.normpath(os.path.join(self.path, other))

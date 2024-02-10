@@ -4,10 +4,13 @@
 * Basic auth (username and password)
 * Uploading and downloading files
 * HTML view of repo (with dark theme)
+* Multi-folder serving
 
 ### Config explanation:
 ```json5
 {
+    "host": "0.0.0.0", // host ip
+    "port": 9800, // port
     "user": "admin", // username 
     "password": "test123", // password
     "protect": [ // what features are protected using password. Defaults to ["put"]
@@ -40,7 +43,7 @@
 * `all` - combine of upper three values
 
 ### Installing
-1. Clone repository `git clone https://github.com/BoBkiNN/SimpleRepoHost`
+1. Clone repository `git clone https://github.com/BoBkiNN/PySimpleHost`
 2. Install python >3.9
 3. Install required modules: `python -m pip install -r requirements.txt`
 4. Configure `config.json` inside cloned repository

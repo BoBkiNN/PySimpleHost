@@ -1,4 +1,6 @@
 {
+    "host": "0.0.0.0",
+    "port": 9800,
     "user": "admin",
     "password": "test123",
     "enable-put": true,
